@@ -2,6 +2,7 @@ from pysnmp.entity.rfc3413.oneliner import cmdgen
 
 import time
 import sys
+import operator
 # import shutil
 from copy import deepcopy
 
@@ -35,16 +36,29 @@ else:
             oids_value[a] = val.prettyPrint()
 
 print('There are next interfaces:')
-for i in oids_value:
-    print(i, ' = ', oids_value[i])
-print('Choose filter')
+sorted_oids_value = sorted(oids_value.items(), key=operator.itemgetter(1))
+for k, v in sorted_oids_value:
+    print(k, ' = ', v)
 
-Filter = input('Filter: ') or 'disabled'
-values = Filter.split(' ')
+
+
 
 
 
 def grep(oidlist, keyword):
+    if 'disabled' in keyword:
+        return oidlist
+    else:
+        res = {}
+        for k, v in oidlist.items():
+            for i in keyword:
+                if i in str(v):
+                    res[k] = oidlist[k]
+        oidlist = res
+        return oidlist
+
+
+def grepv(oidlist, keyword):
     res = deepcopy(oidlist)
     for k, v in res.items():
         for i in keyword:
@@ -72,18 +86,42 @@ def set_for_keys(string):
     return res
 
 
-list_of_oids = grep(oids_value, values)
-print(list_of_oids)
-srt = list(list_of_oids.keys())
+while True:
+    filter_choosing = input('grep[1] or grep -v [2] [default: without]: ') or 'without'
+    if filter_choosing == 'without':
+        print('No filters applied')
+        break
+    if filter_choosing == 'end':
+        print('Applying filter')
+        break
+    elif filter_choosing == '1':
+        Filter = input('Filter: ') or 'disabled'
+        inputs = Filter.split(' ')
+        oids_value = grep(oids_value, inputs)
+        for i in oids_value:
+            print(oids_value[i])
+    elif filter_choosing == '2':
+        Filter = input('Filter: ') or 'disabled'
+        inputs = Filter.split(' ')
+        oids_value = grepv(oids_value, inputs)
+        for i in oids_value:
+            print(oids_value[i])
+    else:
+        print('Wrong choice')
+        break
+
+
+
+srt = list(oids_value.keys())
 srt.sort()
-print('Filtered')
-for i in srt:
-    print(i, ' = ', list_of_oids[i])
+
 
 file_name = IP + ' ' + DATE + '.xml'
 print('Next interfaces added to' + file_name)
-for i in srt:
-    print(i + '=' + list_of_oids[i])
+sorted_oids_value = sorted(oids_value.items(), key=operator.itemgetter(1))
+for k, v in sorted_oids_value:
+    print(k, ' = ', v)
+
 
 f = open(file_name, 'w')
 
